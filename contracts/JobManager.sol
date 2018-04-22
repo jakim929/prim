@@ -19,15 +19,13 @@ contract JobManager {
     mapping (address => Labeller) public labellers;
     address owner;
 
-
-
     modifier sufficientFunds(uint bounty, uint available) { require(bounty < available); _; }
     modifier notFree(uint bounty) { require(bounty > 0); _;}
     modifier availableJob(ImageLabel job) { require(job.availableJob()); _; }
     modifier claimed(ImageLabel job) { require(job.numClaimers() == job.gameType()); _; }
     modifier notSettled(ImageLabel job) {require(!job.settled()); _; }
 
-    function JobManager () public payable
+    constructor () public payable
     {
         owner = msg.sender;
     }
@@ -36,12 +34,10 @@ contract JobManager {
         return (labellers[addr].jobs[job] != 0);
     }
 
-
     function getBalance() public view returns (uint)
     {
         return address(this).balance;
     }
-
 
     // function addJob that creates a job and adds it to the mapping
     function addJob(
@@ -95,11 +91,7 @@ contract JobManager {
         }
     }
 
-    // no longer a need to write a function to delete job since jobs are kept
-    // permanently
-
     function getJob() public returns (address) {
         return jobs[currentJob];
     }
-
 }

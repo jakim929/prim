@@ -36,7 +36,7 @@ contract ImageLabel {
     modifier answered() {require(numAnswered == gameType); _;}
 
     /* A MT can claim this contract by now + _claimWindow */
-    function ImageLabel(
+    constructor(
         string _imageLink,
         string _query,
         uint _claimWindow,
@@ -59,21 +59,6 @@ contract ImageLabel {
         index = _index;
     }
 
-    /* function setLabellerIndex(address addr, int8 newIndex) private returns (bool){
-        addrToAns[addr] = LabellerStatus(true, newIndex);
-        return assignedIndex[addr].assigned;
-    }
-
-    function getLabellerIndex(address addr) private view returns (int8){
-          LabellerStatus storage ls = assignedIndex[addr];
-          if (ls.assigned == false){
-            	return -1;
-          }
-          else{
-            	return ls.index;
-          }
-      } */
-
     function getBalance() public view returns (uint)
     {
         return address(this).balance;
@@ -84,16 +69,11 @@ contract ImageLabel {
         /* beforeTime(claimDeadline) */
         returns (bool)
     {
-        /* int8 newIndex = numClaimers; */
         manager.upsertLabeller(msg.sender);
 
         manager.giveJob(msg.sender, this);
 
-        /* agents[uint()] = manager.labellers(msg.sender); */
-
         agents.push(msg.sender);
-        /* addrToAns[msg.sender] = -1; */
-        /* setLabellerIndex(msg.sender, newIndex); */
         numClaimers += 1;
 
         if (numClaimers == gameType){
@@ -138,6 +118,10 @@ contract ImageLabel {
         return false;
     }
 
+    function consensus() private returns (bool){
+        return true;
+    }
+
     function withdraw()
         public
         // afterTime(answerDeadline)
@@ -169,6 +153,10 @@ contract ImageLabel {
       	else if (gameType == 3){
             isPaid = majority();
         }
+        else if (gameType > 3){
+            isPaid = consensus();
+        }
+
         uint amount = pendingWithdrawals[msg.sender];
         if (isPaid){
             manager.updateStreak(this, msg.sender);
@@ -191,10 +179,6 @@ contract ImageLabel {
         hasBeenAssigned(this, msg.sender)
         returns (int8)
     {
-        /* int8 index = getLabellerIndex(msg.sender); */
-        /* SharedStructs.Labeller memory assignee = agents[uint(index)]; */
-        /* assignee.answer = answer; */
-        /* assignee.completed = true; */
         addrToAns[msg.sender] = answer;
         numAnswered += 1;
         return answer;
@@ -207,7 +191,6 @@ contract ImageLabel {
     function positiveWithdrawal(address addr) public returns (bool){
         return (pendingWithdrawals[addr] > 0);
     }
-
 }
 
 // Add cancellation
