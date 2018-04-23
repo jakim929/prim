@@ -7,10 +7,31 @@ const contract = require('truffle-contract');
 
 import getWeb3 from './utils/getWeb3'
 
+import { withStyles } from 'material-ui/styles';
+
+
+import Button from 'material-ui/Button';
+import AppBar from 'material-ui/AppBar';
+import Toolbar from 'material-ui/Toolbar';
+import Typography from 'material-ui/Typography';
+import Grid from 'material-ui/Grid';
+import Paper from 'material-ui/Paper';
+
+
 import './css/oswald.css'
 import './css/open-sans.css'
 import './css/pure-min.css'
 import './App.css'
+
+const styles = {
+  paper: {
+      padding: "10%",
+      textAlign: "center"
+  },
+  button: {
+      maxWidth : "100%"
+  }
+};
 
 const options = {
   contracts: [
@@ -120,7 +141,7 @@ class App extends Component {
         return this.getNextJob(this.state.currentJobManager).then((ret) =>{console.log(ret); return this.getJobInfo(ret, this.imageLabelAbstract)})
     }
 
-    instantiateContract() {
+    instantiateContract = () => {
         /*
          * SMART CONTRACT EXAMPLE
          *
@@ -162,6 +183,7 @@ class App extends Component {
         .then((ret) => {
             console.log("Claiming/Answering Job Transaction", ret)
             this.instantiateContract()
+            this.forceUpdate();
         })
         // .then((ret) => {
         //     console.log("Claiming Job Transaction", ret)
@@ -175,26 +197,48 @@ class App extends Component {
     }
 
 
-
     render() {
+        const { classes } = this.props;
+
         if(this.state.currentJobDetails){
             return (
                 <div className="App">
-                    <nav className="navbar pure-menu pure-menu-horizontal">
-                        <a href="#" className="pure-menu-heading pure-menu-link">Prim Image Labelling</a>
-                    </nav>
+                    <AppBar position="static" color="default" classes={{colorDefault:"black"}}>
+                      <Toolbar>
+                        <Typography variant="title">
+                          Prim Image Labelling
+                        </Typography>
+                      </Toolbar>
+                    </AppBar>
 
-                    <main className="container">
-                        <div className="pure-g">
-                            <div className="pure-u-1-1">
-                                <h1>{this.state.currentJobDetails.query}</h1>
-                                <h1>{this.state.currentJobDetails.index.toNumber()}</h1>
+                    <main>
+                        <Grid container spacing={24}>
+                            <Grid item xs={12} sm={12}>
+                                {/* <button onClick={() => this.answerJob(1)}>Hack </button> */}
+                                {/* {this.state.currentJobDetails.index.toNumber()} */}
+                                <Paper className={classes.paper} elevation={4}>
 
-                                <img src={this.state.currentJobDetails.imageLink}/>
-                                <button onClick={() => this.answerJob(1)}> Yes </button>
-                                <button onClick={() => this.answerJob(0)}> No </button>
-                            </div>
-                        </div>
+                                    <h1>{this.state.currentJobDetails.query}</h1>
+                                    {/* <h1>{this.props.currentJobDetails.index.toNumber()}</h1> */}
+
+                                    <img style={{maxWidth:"80%"}} src={this.state.currentJobDetails.imageLink}/><br/>
+                                    <Grid container spacing={24} >
+                                        <Grid item xs={6} sm={6}>
+                                            <Button variant="raised"  size="large" onClick={() => this.answerJob(1)}>
+                                                Yes
+                                            </Button>
+                                        </Grid>
+                                        <Grid item xs={6} sm={6}>
+                                            <Button variant="raised"  size="large" onClick={() => this.answerJob(0)}>
+                                                No
+                                            </Button>
+                                        </Grid>
+                                    </Grid>
+
+                                </Paper>
+                            </Grid>
+                        </Grid>
+
                     </main>
                 </div>
             );
@@ -207,9 +251,11 @@ class App extends Component {
         }
 
     }
+
+
 }
 
 
 
 
-export default App;
+export default withStyles(styles)(App);

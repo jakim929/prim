@@ -71,9 +71,9 @@ contract ImageLabel {
         agents.push(msg.sender);
         numClaimers += 1;
 
-        if (numClaimers == gameType){
+        /* if (numClaimers == gameType){
             manager.markClaimed(this);
-        }
+        } */
 
         return true;
     }

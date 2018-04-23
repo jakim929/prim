@@ -75,10 +75,11 @@ contract JobManager {
     {
         labellers[addr].jobs[job] = true;
         labellers[addr].latestJob = job.index();
+        currentJob+=1;
     }
 
     function markClaimed(ImageLabel job)
-        claimed(job)
+        /* claimed(job) */
         public
     {
         currentJob += 1;
@@ -97,14 +98,15 @@ contract JobManager {
     }
 
     function getJob()
-        workLeftFor(msg.sender)
+        /* workLeftFor(msg.sender) */
         public
         returns (address)
     {
-        uint16 jobSearch = labellers[msg.sender].latestJob;
+        return jobs[currentJob];
+        /* uint16 jobSearch = labellers[msg.sender].latestJob;
         while(jobAssigned(ImageLabel(jobs[jobSearch]), msg.sender)){
             jobSearch += 1;
         }
-        return jobs[jobSearch];
+        return jobs[jobSearch]; */
     }
 }
