@@ -7,31 +7,37 @@ contract JobManager {
 
     struct Labeller {
         bool set;
-        uint8 streak;
-        mapping(address => uint) jobs;
+        uint16 streak;
+        mapping(address => bool) jobs;
+        uint16 latestJob;
     }
 
-    uint numJobs = 0;
-    uint8 currentJob = 0;
+    uint16 public numJobs = 0;
+    uint16 public currentJob = 0;
 
     address[] public jobs;
 
     mapping (address => Labeller) public labellers;
-    address owner;
+    address public owner;
 
     modifier sufficientFunds(uint bounty, uint available) { require(bounty < available); _; }
     modifier notFree(uint bounty) { require(bounty > 0); _;}
     modifier availableJob(ImageLabel job) { require(job.availableJob()); _; }
     modifier claimed(ImageLabel job) { require(job.numClaimers() == job.gameType()); _; }
-    modifier notSettled(ImageLabel job) {require(!job.settled()); _; }
+    modifier notSettled(ImageLabel job) {require(!(job.isSettled())); _; }
+    modifier workLeftFor(address addr) {require(!(labellers[addr].latestJob == numJobs)); _; }
 
-    constructor () public payable
+    constructor() public payable
     {
         owner = msg.sender;
     }
 
-    function jobAssigned(ImageLabel job, address addr) public returns (bool) {
-        return (labellers[addr].jobs[job] != 0);
+    function indexToAddr(uint16 i) public returns(address){
+        return jobs[i];
+    }
+
+    function jobAssigned(ImageLabel job, address addr) public returns (bool){
+        return labellers[addr].jobs[job];
     }
 
     function getBalance() public view returns (uint)
@@ -43,16 +49,14 @@ contract JobManager {
     function addJob(
         string imageLink,
         string query,
-        uint claimWindow,
-        uint answerWindow,
-        uint gameType,
+        uint8 gameType,
         uint bounty)
         sufficientFunds(bounty, address(this).balance)
         notFree(bounty)
         public
         returns (address)
     {
-        ImageLabel newJob = (new ImageLabel).value(bounty)(imageLink, query, claimWindow, answerWindow, gameType, this, numJobs);
+        ImageLabel newJob = (new ImageLabel).value(bounty)(imageLink, query, gameType, this, numJobs);
         jobs.push(newJob);
         numJobs += 1;
 
@@ -61,7 +65,7 @@ contract JobManager {
 
     function upsertLabeller(address addr) public {
         if (!(labellers[addr].set)){
-            labellers[addr] = Labeller({set: true, streak: 0});
+            labellers[addr] = Labeller({set: true, streak: 0, latestJob: 0});
         }
     }
 
@@ -69,7 +73,8 @@ contract JobManager {
         availableJob(job)
         public
     {
-        labellers[addr].jobs[job] = 1;
+        labellers[addr].jobs[job] = true;
+        labellers[addr].latestJob = job.index();
     }
 
     function markClaimed(ImageLabel job)
@@ -91,7 +96,15 @@ contract JobManager {
         }
     }
 
-    function getJob() public returns (address) {
-        return jobs[currentJob];
+    function getJob()
+        workLeftFor(msg.sender)
+        public
+        returns (address)
+    {
+        uint16 jobSearch = labellers[msg.sender].latestJob;
+        while(jobAssigned(ImageLabel(jobs[jobSearch]), msg.sender)){
+            jobSearch += 1;
+        }
+        return jobs[jobSearch];
     }
 }

@@ -6,44 +6,38 @@ import "./JobManager.sol";
 contract ImageLabel {
 
     // we can make this hacky and easy by always making numLabellers gameType + 2
-    /* int8 public numLabellers = 2; */
-    int8 public gameType;
+    uint8 public gameType;
     string public imageLink;
     string public query;
     address public owner;
     uint public bounty;
-    uint public claimDeadline;
-    uint public answerDeadline;
     JobManager public manager;
-    uint public index;
+    uint16 public index;
 
     address[] public agents;
     mapping(address => int8) public addrToAns;
+    mapping(address => bool) public settled;
 
-    int8 public numClaimers = 0;
-    int8 public numAnswered = 0;
-    bool public settled = false;
+    uint8 public numClaimers = 0;
+    uint8 public numAnswered = 0;
 
+    mapping (address => uint) public amountEarned;
     mapping(address => uint) public pendingWithdrawals;
 
-    modifier afterTime(uint _time) { require(now > _time); _; }
-    modifier beforeTime(uint _time) { require(now < _time); _; }
   	modifier hasBeenAssigned(ImageLabel job, address addr){
         require(manager.jobAssigned(job, addr));
          _;
     }
-    modifier notSettled() {require(!settled); _;}
+    modifier notSettled() {require(!(isSettled())); _;}
     modifier answered() {require(numAnswered == gameType); _;}
 
     /* A MT can claim this contract by now + _claimWindow */
     constructor(
         string _imageLink,
         string _query,
-        uint _claimWindow,
-        uint _answerWindow,
-        uint _gameType,
+        uint8 _gameType,
         address _manager,
-        uint _index
+        uint16 _index
     )
     public
     payable
@@ -52,11 +46,13 @@ contract ImageLabel {
         imageLink = _imageLink;
         query = _query;
         bounty = msg.value;
-		gameType = int8(_gameType);
-        claimDeadline = now + _claimWindow;
-        answerDeadline = claimDeadline + _answerWindow;
+        gameType = _gameType;
         manager = JobManager(_manager);
         index = _index;
+    }
+
+    function getEarnings() public returns (uint){
+        return amountEarned[msg.sender];
     }
 
     function getBalance() public view returns (uint)
@@ -66,7 +62,6 @@ contract ImageLabel {
 
     function claimJob()
         public
-        /* beforeTime(claimDeadline) */
         returns (bool)
     {
         manager.upsertLabeller(msg.sender);
@@ -84,7 +79,12 @@ contract ImageLabel {
     }
 
 
-    function esp() private returns (bool) {
+    function esp()
+        notSettled()
+        answered()
+        private
+        returns (bool)
+    {
         if (addrToAns[agents[0]] == addrToAns[agents[1]]){
             pendingWithdrawals[agents[0]] = bounty/2;
             pendingWithdrawals[agents[1]] = bounty/2;
@@ -93,7 +93,11 @@ contract ImageLabel {
         return false;
     }
 
-    function majority() private returns (bool) {
+    function majority()
+        notSettled()
+        answered()
+        private
+        returns (bool) {
         if (addrToAns[agents[0]] == addrToAns[agents[1]] && addrToAns[agents[1]] == addrToAns[agents[2]]){
             pendingWithdrawals[agents[0]] = bounty/3;
             pendingWithdrawals[agents[1]] = bounty/3;
@@ -118,26 +122,17 @@ contract ImageLabel {
         return false;
     }
 
-    function consensus() private returns (bool){
+    function consensus()
+        notSettled()
+        answered()
+        private
+        returns (bool)
+    {
         return true;
     }
 
-    function withdraw()
-        public
-        // afterTime(answerDeadline)
-        returns (bool)
-    {
-        uint amount = pendingWithdrawals[msg.sender];
-        if (amount > 0){
-            manager.updateStreak(this, msg.sender);
-            pendingWithdrawals[msg.sender] = 0;
-            if (!msg.sender.send(amount)){
-                // No need to call throw here, just reset the amount owing
-                pendingWithdrawals[msg.sender] = amount;
-                return false;
-            }
-        }
-        return true;
+    function isSettled() public returns (bool){
+        return settled[msg.sender];
     }
 
     function settle()
@@ -153,13 +148,14 @@ contract ImageLabel {
       	else if (gameType == 3){
             isPaid = majority();
         }
-        else if (gameType > 3){
+        /* else if (gameType > 3){
             isPaid = consensus();
-        }
+        } */
 
         uint amount = pendingWithdrawals[msg.sender];
         if (isPaid){
             manager.updateStreak(this, msg.sender);
+            amountEarned[msg.sender] = pendingWithdrawals[msg.sender];
             pendingWithdrawals[msg.sender] = 0;
             if (!msg.sender.send(amount)){
                 // No need to call throw here, just reset the amount owing
@@ -170,7 +166,7 @@ contract ImageLabel {
         else{
             manager.updateStreak(this, msg.sender);
         }
-        settled = true;
+        settled[msg.sender] = true;
         return true;
     }
 
@@ -182,6 +178,15 @@ contract ImageLabel {
         addrToAns[msg.sender] = answer;
         numAnswered += 1;
         return answer;
+    }
+
+    function claimAnswerJob(int8 answer)
+        public
+        returns(int8)
+    {
+        claimJob();
+        int8 retVal = answerJob(answer);
+        return retVal;
     }
 
     function availableJob() public returns (bool){
