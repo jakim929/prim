@@ -3,6 +3,8 @@ import Job from './Job';
 
 import JobManagerContract from '../build/contracts/JobManager.json'
 import ImageLabelContract from '../build/contracts/ImageLabel.json'
+import Units from 'ethereumjs-units'
+
 const contract = require('truffle-contract');
 
 import getWeb3 from './utils/getWeb3'
@@ -10,13 +12,18 @@ import getWeb3 from './utils/getWeb3'
 import { withStyles } from 'material-ui/styles';
 
 
-import Button from 'material-ui/Button';
 import AppBar from 'material-ui/AppBar';
 import Toolbar from 'material-ui/Toolbar';
 import Typography from 'material-ui/Typography';
 import Grid from 'material-ui/Grid';
 import Paper from 'material-ui/Paper';
+import Button from 'material-ui/Button';
+import Snackbar from 'material-ui/Snackbar';
+import Icon from 'material-ui/Icon';
 
+
+
+import PositionedSnackbar from './Snack.js';
 
 import './css/oswald.css'
 import './css/open-sans.css'
@@ -25,11 +32,17 @@ import './App.css'
 
 const styles = {
   paper: {
-      padding: "10%",
+      paddingTop:"5%",
+      paddingBottom:"5%",
+      paddingLeft: "10%",
+      paddingRight: "10%",
       textAlign: "center"
   },
   button: {
       maxWidth : "100%"
+  },
+  snackbar:{
+      backgroundColor : "#80CBC4"
   }
 };
 
@@ -133,12 +146,12 @@ class App extends Component {
         });
     }
 
-    getNextJob(currentJobManager) {
-        return currentJobManager.getJob.call()
+    getNextJob(currentJobManager, account) {
+        return currentJobManager.getJob.call({from: account})
     }
 
-    getNextJobInfo() {
-        return this.getNextJob(this.state.currentJobManager).then((ret) =>{console.log(ret); return this.getJobInfo(ret, this.imageLabelAbstract)})
+    getNextJobInfo(currentJobManager) {
+        return this.getNextJob(currentJobManager).then((ret) =>{console.log(ret); return this.getJobInfo(ret, this.imageLabelAbstract)})
     }
 
     instantiateContract = () => {
@@ -156,44 +169,56 @@ class App extends Component {
 
         this.jobManagerAbstract = jobManager
         this.imageLabelAbstract = imageLabel
-        var jobManagerInstance;
+        var currentJobManager;
+        var currentJobAddress;
+        var currentJobDetails;
+        var account;
 
         this.state.web3.eth.getAccounts((error, accounts) => {
             jobManager.deployed().then((instance) => {
-                this.setState({account: accounts[0]})
                 console.log(accounts)
-                this.setState({currentJobManager: instance})
+                currentJobManager = instance;
+                // this.setState({currentJobManager: instance})
                 console.log(instance)
-                return this.getNextJob(instance)
+                return this.getNextJob(instance, accounts[0])
             }).then((ret) => {
-                this.setState({currentJobAddress: ret})
+                currentJobAddress = ret;
+                // this.setState({currentJobAddress: ret})
                 console.log("getjob:",ret)
                 return this.getJobInfo(ret)
             }, () => {console.log("failed to find new job")}
             ).then((ret) => {
-                this.setState({currentJobDetails: ret})
+                currentJobDetails = ret;
+                this.setState({account: accounts[0], currentJobManager, currentJobAddress, currentJobDetails})
+                // this.setState({currentJobDetails: ret})
             })
         })
 
     }
 
-    answerJob = (answer) =>{
+    closeSnack = () => {
+        console.log("DSAFASFSADFDSA")
+        this.setState({open: false})
+    }
+
+    answerJob = (answer) => {
         var currentJob = this.imageLabelAbstract.at(this.state.currentJobAddress);
-        currentJob.claimAnswerJob(answer, {from:this.state.account, gas:2100000})
+        console.log("hello", this.state)
+
+        return currentJob.claimAnswerJob(answer, {from:this.state.account, gas:2100000})
         .then((ret) => {
             console.log("Claiming/Answering Job Transaction", ret)
-            this.instantiateContract()
+            this.instantiateContract();
             this.forceUpdate();
         })
-        // .then((ret) => {
-        //     console.log("Claiming Job Transaction", ret)
-        //     return currentJob.answerJob(answer, {from:this.state.account, gas:210000})
-        // }).then((ret) =>{
-        //     console.log("Answering Job Transaction", ret)
-        //     this.instantiateContract()
-        //
-        // })
 
+    }
+
+
+
+    refresh = () => {
+        this.instantiateContract()
+        this.forceUpdate()
     }
 
 
@@ -202,7 +227,10 @@ class App extends Component {
 
         if(this.state.currentJobDetails){
             return (
+
                 <div className="App">
+                    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons"/>
+
                     <AppBar position="static" color="default" classes={{colorDefault:"black"}}>
                       <Toolbar>
                         <Typography variant="title">
@@ -213,6 +241,11 @@ class App extends Component {
 
                     <main>
                         <Grid container spacing={24}>
+                            <Grid item xs={6}>
+                                <PositionedSnackbar className={classes.snackbar} open={this.state.open} onClose={this.closeSnack.bind(this)} amount={Units.convert(this.state.amountEarned?this.state.amountEarned:'0','wei', 'eth')}/>
+                            </Grid>
+                        </Grid>
+                        <Grid container spacing={24}>
                             <Grid item xs={12} sm={12}>
                                 {/* <button onClick={() => this.answerJob(1)}>Hack </button> */}
                                 {/* {this.state.currentJobDetails.index.toNumber()} */}
@@ -220,8 +253,8 @@ class App extends Component {
 
                                     <h1>{this.state.currentJobDetails.query}</h1>
                                     {/* <h1>{this.props.currentJobDetails.index.toNumber()}</h1> */}
-
-                                    <img style={{maxWidth:"80%"}} src={this.state.currentJobDetails.imageLink}/><br/>
+                                    <h4>Reward Pool: {Units.convert(this.state.currentJobDetails.bounty.toString(), 'wei', 'eth')} ETH</h4>
+                                    <img style={{maxWidth:"60%"}} src={this.state.currentJobDetails.imageLink}/><br/>
                                     <Grid container spacing={24} >
                                         <Grid item xs={6} sm={6}>
                                             <Button variant="raised"  size="large" onClick={() => this.answerJob(1)}>
@@ -234,6 +267,9 @@ class App extends Component {
                                             </Button>
                                         </Grid>
                                     </Grid>
+                                    <Button variant="fab" color="primary" aria-label="r" onClick={this.refresh.bind(this)} className={classes.button}>
+                                        <Icon>refresh_icon</Icon>
+                                    </Button>
 
                                 </Paper>
                             </Grid>

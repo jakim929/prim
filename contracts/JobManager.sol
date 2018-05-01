@@ -36,7 +36,7 @@ contract JobManager {
         return jobs[i];
     }
 
-    function jobAssigned(ImageLabel job, address addr) public returns (bool){
+    function jobAssigned(address job, address addr) public returns (bool){
         return labellers[addr].jobs[job];
     }
 
@@ -69,13 +69,33 @@ contract JobManager {
         }
     }
 
-    function giveJob(address addr, ImageLabel job)
-        availableJob(job)
+    function giveJob(address addr, address job, uint16 index)
+        /* availableJob(job) */
         public
     {
+
         labellers[addr].jobs[job] = true;
-        labellers[addr].latestJob = job.index();
-        currentJob+=1;
+        labellers[addr].latestJob = index;
+    }
+
+    function claimSpecificJob(address person, address job, uint16 index)
+        public
+        returns(bool)
+    {
+        upsertLabeller(person);
+        if(!labellers[person].set){
+            return false;
+        }
+        giveJob(person, job, index);
+        if(!labellers[person].jobs[job]){
+            return false;
+        }
+        return true;
+
+    }
+
+    function setCurrentJob(uint16 val) public {
+        currentJob = val;
     }
 
     function markClaimed(ImageLabel job)
@@ -85,8 +105,12 @@ contract JobManager {
         currentJob += 1;
     }
 
+    function getStreak(address addr) returns (uint16) {
+        return labellers[addr].streak;
+    }
+
     function updateStreak(ImageLabel job, address addr)
-        notSettled(job)
+        /* notSettled(job) */
         public
     {
         if (job.positiveWithdrawal(addr)){
@@ -102,11 +126,22 @@ contract JobManager {
         public
         returns (address)
     {
-        return jobs[currentJob];
-        /* uint16 jobSearch = labellers[msg.sender].latestJob;
+        /* return jobs[currentJob]; */
+        // Returns the sender's address if out of jobs.
+        uint16 labellerLatestJob = labellers[msg.sender].latestJob;
+        if(labellerLatestJob == numJobs - 1){
+            return msg.sender;
+        }
+        uint16 jobSearch = currentJob;
+        if(labellerLatestJob > currentJob){
+            jobSearch = labellerLatestJob;
+        }
         while(jobAssigned(ImageLabel(jobs[jobSearch]), msg.sender)){
             jobSearch += 1;
+
         }
-        return jobs[jobSearch]; */
+
+
+        return jobs[jobSearch];
     }
 }

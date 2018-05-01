@@ -64,9 +64,10 @@ contract ImageLabel {
         public
         returns (bool)
     {
-        manager.upsertLabeller(msg.sender);
 
-        manager.giveJob(msg.sender, this);
+        if(!manager.claimSpecificJob(msg.sender, this, index)){
+            return false;
+        }
 
         agents.push(msg.sender);
         numClaimers += 1;
@@ -187,6 +188,14 @@ contract ImageLabel {
         claimJob();
         int8 retVal = answerJob(answer);
         return retVal;
+    }
+
+    function claimAnswerSettleJob(int8 answer)
+        public
+        returns(bool)
+    {
+        claimAnswerJob(answer);
+        return settle();
     }
 
     function availableJob() public returns (bool){
