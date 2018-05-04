@@ -1,16 +1,11 @@
 import React, { Component } from 'react';
 import Job from './Job';
 
-import JobManagerContract from '../build/contracts/JobManager.json'
-import ImageLabelContract from '../build/contracts/ImageLabel.json'
-import Units from 'ethereumjs-units'
+import JobManagerContract from '../build/contracts/JobManager.json';
+import Units from 'ethereumjs-units';
 
-const contract = require('truffle-contract');
-
-import getWeb3 from './utils/getWeb3'
-
+import getWeb3 from './utils/getWeb3';
 import { withStyles } from 'material-ui/styles';
-
 
 import AppBar from 'material-ui/AppBar';
 import Toolbar from 'material-ui/Toolbar';
@@ -20,15 +15,14 @@ import Paper from 'material-ui/Paper';
 import Button from 'material-ui/Button';
 import Snackbar from 'material-ui/Snackbar';
 import Icon from 'material-ui/Icon';
-
-
-
 import PositionedSnackbar from './Snack.js';
 
 import './css/oswald.css'
 import './css/open-sans.css'
 import './css/pure-min.css'
 import './App.css'
+
+const contract = require('truffle-contract');
 
 const styles = {
   paper: {
@@ -53,7 +47,6 @@ const options = {
   ]
 }
 
-
 class App extends Component {
     constructor(props) {
         super(props)
@@ -66,14 +59,10 @@ class App extends Component {
             currentJobAddress: null,
             currentJobDetails: null,
             totalEarnings: 0
-
         }
     }
 
     componentWillMount() {
-    // Get network provider and web3 instance.
-    // See utils/getWeb3 for more info.
-
         getWeb3
         .then(results => {
             this.setState({
@@ -162,13 +151,11 @@ class App extends Component {
          * state management library, but for convenience I've placed them here.
          */
 
-        const jobManager = contract(JobManagerContract)
-        const imageLabel = contract(ImageLabelContract)
-        jobManager.setProvider(this.state.web3.currentProvider)
-        imageLabel.setProvider(this.state.web3.currentProvider)
+        const jobManager = contract(JobManagerContract);
+        jobManager.setProvider(this.state.web3.currentProvider);
 
-        this.jobManagerAbstract = jobManager
-        this.imageLabelAbstract = imageLabel
+        this.jobManagerAbstract = jobManager;
+
         var currentJobManager;
         var currentJobAddress;
         var currentJobDetails;
@@ -287,11 +274,6 @@ class App extends Component {
         }
 
     }
-
-
 }
-
-
-
 
 export default withStyles(styles)(App);
