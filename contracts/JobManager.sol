@@ -207,7 +207,7 @@ contract JobManager {
             uint8 split = tally[popularAnswer];
             for (i = 0; i < job.gameType; i++){
                 if (job.addrToAns[job.agents[i]] == popularAnswer){
-                    job.pendingWithdrawals[job.agents[i]] = job.bounty / uint(split);
+                    job.pendingWithdrawals[job.agents[i]] = job.bounty/split;
                 }
             }
             return (job.addrToAns[msg.sender] == popularAnswer);
