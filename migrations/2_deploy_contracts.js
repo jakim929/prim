@@ -23,9 +23,5 @@ module.exports = function(deployer, network, accounts) {
         for (let i = 0; i < jobList.length; i++){
             await manager.addJob(...jobList[i]);
         }
-        // for (let i = 0; i < jobList.length; i++){
-        //     let addr = await manager.jobs.call(i);
-        //     jobAddresses.push(addr);
-        // }
     })
 }
