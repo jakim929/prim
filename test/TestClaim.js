@@ -14,103 +14,28 @@ contract("JobManager", accounts => {
             assert.equal(ret, 5);
             return manager.currentJob.call({from: accounts[0]})
         }).then(ret => {
-            return manager.getJob.call({from: accounts[0]});
+            return manager.findJob.call({from: accounts[0]});
         }).then(ret => {
-            console.log("next job for 0: ", ret)
-            return manager.claimAnswerJob(0, {from: accounts[0]});
+            return manager.claimAnswerJob(ret, 0, {from: accounts[0]});
         }).then(ret => {
-            return manager.jobAssigned.call(curJobAddress, accounts[0], {from: accounts[0]})
+            return manager.getNum.call(0);
         }).then(ret => {
-            console.log("job " + curJobAddress + " claimed by 0 " + ret)
-            return manager.getJob.call({from: accounts[0]})
+            console.log(Number(ret));
         }).then(ret => {
-            console.log("next job for 0: ", ret)
-            curJob = ImageLabel.at(ret);
-            curJobAddress = ret;
-            return curJob.claimAnswerJob(0, {from: accounts[0]});
+            return manager.findJob.call({from: accounts[0]});
         }).then(ret => {
-            return manager.jobAssigned.call(curJobAddress, accounts[0], {from: accounts[0]})
+            console.log("should be 1: ", Number(ret));
+            return manager.findJob.call({from: accounts[1]});
         }).then(ret => {
-            console.log("job " + curJobAddress + " claimed by 0 " + ret)
-            return manager.getJob.call({from: accounts[0]})
+            console.log("should be 0: ", Number(ret));
+            return manager.claimAnswerJob(ret, 0, {from: accounts[1]});
         }).then(ret => {
-            console.log("next job for 0: ", ret)
-            curJob = ImageLabel.at(ret);
-            curJobAddress = ret;
-            return curJob.claimAnswerJob(0, {from: accounts[0]});
+            return manager.getNum.call(0);
         }).then(ret => {
-            return manager.jobAssigned.call(curJobAddress, accounts[0], {from: accounts[0]})
-        }).then(ret => {
-            console.log("job " + curJobAddress + " claimed by 0 " + ret)
-            return manager.getJob.call({from: accounts[0]})
-        }).then(ret => {
-            console.log("next job for 0: ", ret)
-            curJob = ImageLabel.at(ret);
-            curJobAddress = ret;
-            return curJob.claimAnswerJob(0, {from: accounts[0]});
-        }).then(ret => {
-            return manager.jobAssigned.call(curJobAddress, accounts[0], {from: accounts[0]})
-        }).then(ret => {
-            console.log("job " + curJobAddress + " claimed by 0 " + ret)
-            return manager.getJob.call({from: accounts[0]})
-        }).then(ret => {
-            console.log("next job for 0: ", ret)
-            curJob = ImageLabel.at(ret);
-            curJobAddress = ret;
-            return curJob.claimAnswerJob(0, {from: accounts[0]});
-        }).then(ret => {
-            return manager.jobAssigned.call(curJobAddress, accounts[0], {from: accounts[0]})
-        }).then(ret => {
-            console.log("job " + curJobAddress + " claimed by 0 " + ret)
-            return manager.getJob.call({from: accounts[0]})
-        }).then(ret => {
-            if(ret == accounts[0]){
-                console.log("out of jobs for 0")
-            }
-            return manager.getJob.call({from: accounts[1]});
-        }).then(ret => {
-            curJob = ImageLabel.at(ret);
-            curJobAddress = ret;
-            console.log("next job for 1: ", ret)
-            return curJob.claimAnswerJob(0, {from: accounts[1]});
-        }).then(ret => {
-            return manager.jobAssigned.call(curJobAddress, accounts[1], {from: accounts[1]})
-
-        }).then(ret => {
-            console.log("job " + curJobAddress + " claimed by 1 " + ret)
-            return manager.getJob.call({from: accounts[1]})
-        }).then(ret => {
-            console.log("next job for 1: ", ret)
-            curJob = ImageLabel.at(ret);
-            curJobAddress = ret;
-            return curJob.claimAnswerJob(0, {from: accounts[1]});
-        }).then(ret => {
-            return manager.jobAssigned.call(curJobAddress, accounts[1], {from: accounts[1]})
-        }).then(ret => {
-            console.log("job " + curJobAddress + " claimed by 1 " + ret)
-            return manager.getJob.call({from: accounts[1]})
-        }).then(ret => {
-            console.log("next job for 1: ", ret)
-            curJob = ImageLabel.at(ret);
-            curJobAddress = ret;
-            return curJob.claimAnswerJob(0, {from: accounts[1]});
-        }).then(ret => {
-            return manager.jobAssigned.call(curJobAddress, accounts[1], {from: accounts[1]})
-        }).then(ret => {
-            console.log("job " + curJobAddress + " claimed by 1 " + ret)
-            return manager.getJob.call({from: accounts[1]})
-        }).then(ret => {
-            console.log("next job for 1: ", ret)
-            curJob = ImageLabel.at(ret);
-            curJobAddress = ret;
-            return curJob.claimAnswerJob(1, {from: accounts[1]});
-        }).then(ret => {
-            return manager.jobAssigned.call(curJobAddress, accounts[1], {from: accounts[1]})
-        }).then(ret => {
-            console.log("job " + curJobAddress + " claimed by 1 " + ret)
-            return manager.getJob.call({from: accounts[1]})
-        }).then(ret => {
-            console.log("next job for 1: ", ret)
+            assert.equal(ret, 2);
+        }).then(async (ret) => {
+            await manager.settle(0, {from: accounts[0]});
+            await manager.settle(0, {from: accounts[1]});
         })
     })
 })

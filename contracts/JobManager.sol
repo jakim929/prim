@@ -25,8 +25,8 @@ contract JobManager {
     }
 
     uint16 public numJobs = 0;
-    uint16 private currentJob = 0;
-    Job[] private jobs;
+    uint16 public currentJob = 0;
+    Job[] public jobs;
     mapping (address => Labeller) labellers;
     address public owner;
 
@@ -46,22 +46,11 @@ contract JobManager {
         owner = msg.sender;
     }
 
-
-    function claimSpecificJob(uint16 jobIndex, address person)
+    function getNum(uint16 jobIndex)
         public
-        returns(bool)
+        returns (uint8)
     {
-        Job storage job = jobs[jobIndex];
-
-        upsertLabeller(person);
-        if(!labellers[person].set){
-            return false;
-        }
-        giveJob(person, jobIndex);
-        if(!labellers[person].jobs[job.index]){
-            return false;
-        }
-        return true;
+        return jobs[jobIndex].numAnswered;
     }
 
     function answerJob(uint16 jobIndex, uint8 answer)
@@ -76,12 +65,13 @@ contract JobManager {
     }
 
     function claimJob(uint16 jobIndex)
+        availableJob(jobs[jobIndex])
         private
         returns (bool)
     {
         Job storage job = jobs[jobIndex];
 
-        if(!(claimSpecificJob(jobIndex, msg.sender))){
+        if(!(giveJob(jobIndex, msg.sender))){
             return false;
         }
 
@@ -92,6 +82,24 @@ contract JobManager {
             markClaimed(jobIndex);
         }
 
+        return true;
+    }
+
+    function giveJob(uint16 jobIndex, address addr)
+        availableJob(jobs[jobIndex])
+        public
+        returns(bool)
+    {
+        Job storage job = jobs[jobIndex];
+        upsertLabeller(addr);
+        if(!labellers[addr].set){
+            return false;
+        }
+        labellers[addr].jobs[jobIndex] = true;
+        labellers[addr].latestJob = jobIndex;
+        /* if(!labellers[person].jobs[job.index]){
+            return false;
+        } */
         return true;
     }
 
@@ -112,7 +120,7 @@ contract JobManager {
     }
 
     function esp(uint16 jobIndex)
-        answered(job)
+        answered(jobs[jobIndex])
         private
         returns (bool)
     {
@@ -246,18 +254,6 @@ contract JobManager {
         }
     }
 
-    function giveJob(address addr, uint16 jobIndex)
-        availableJob(jobs[jobIndex])
-        private
-    {
-        labellers[addr].jobs[jobIndex] = true;
-        labellers[addr].latestJob = jobIndex;
-    }
-
-    function setCurrentJob(uint16 val) private {
-        currentJob = val;
-    }
-
     function markClaimed(uint16 jobIndex)
         claimed(jobs[jobIndex])
         private
@@ -283,7 +279,7 @@ contract JobManager {
         }
     }
 
-    function getJob()
+    function findJob()
         workLeftFor(msg.sender)
         public
         returns (uint16)
