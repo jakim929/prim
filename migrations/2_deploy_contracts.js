@@ -44,3 +44,5 @@ module.exports = function(deployer, network, accounts) {
         }
     })
 }
+
+process.exit(0);

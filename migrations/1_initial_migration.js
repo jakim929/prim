@@ -4,3 +4,5 @@ module.exports = function(deployer, network, accounts) {
     console.log(accounts[0]);
     deployer.deploy(Migrations);
 };
+
+process.exit(0);
