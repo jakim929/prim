@@ -1,26 +1,28 @@
 pragma solidity ^0.4.17;
 
 contract JobManager {
+    uint16 constant batchSize = 256;
 
     struct Labeller {
         bool set;
         uint16 streak;
-        mapping(uint64 => bool) jobs;
         uint16 latestJob;
+        mapping(uint256 => uint8) jobs;
+        uint amountEarned;
     }
 
     struct Job {
         uint8 gameType;
         string imageLink;
+        string baseUrl;
         string query;
         uint bounty;
         uint16 index;
         address[] agents;
         uint8 numClaimers;
         uint8 numAnswered;
-        mapping (address => uint8) addrToAns;
+        mapping (address => uint256) addrToAns;
         mapping (address => bool) settled;
-        mapping (address => uint) amountEarned;
         mapping (address => uint) pendingWithdrawals;
     }
 
@@ -36,7 +38,7 @@ contract JobManager {
     modifier availableJob(Job job) { require(job.numClaimers < job.gameType); _; }
     modifier workLeftFor(address addr) {require(!(labellers[addr].latestJob == numJobs)); _; }
     modifier hasBeenAssigned(Job job, address addr){
-        require(labellers[addr].jobs[job.index]);
+        require(labellers[addr].jobs[job.index] != 0);
          _;
     }
     modifier answered(Job job) {require(job.numAnswered == job.gameType); _;}
@@ -47,6 +49,10 @@ contract JobManager {
 
 
     // Functions for job CRUD
+
+    function jobStatus(uint64 jobSetIndex, address person) view returns(uint8){
+        return labellers[person].jobs[jobSetIndex];
+    }
 
     // function addJob that creates a job and adds it to job array
     function addJob(
@@ -62,6 +68,7 @@ contract JobManager {
         jobs.push(Job({
             gameType: gameType,
             imageLink: imageLink,
+            baseUrl: "https://tinyurl.com/",
             query: query,
             bounty: bounty,
             index: numJobs,
@@ -88,7 +95,7 @@ contract JobManager {
         if(labellerLatestJob > currentJob){
             jobSearch = labellerLatestJob;
         }
-        while (labellers[msg.sender].jobs[jobSearch]){
+        while (labellers[msg.sender].jobs[jobSearch] != 0){
             jobSearch += 1;
         }
         return jobs[jobSearch].index;
@@ -96,18 +103,18 @@ contract JobManager {
 
     function claimJob(uint16 jobIndex)
         availableJob(jobs[jobIndex])
-        private
+        public
         returns (bool)
     {
         Job storage job = jobs[jobIndex];
 
         // upsert labeller (used to be function)
-        if (!(labellers[addr].set)){
-            labellers[addr] = Labeller({set: true, streak: 0, latestJob: 0});
+        if (!(labellers[msg.sender].set)){
+            labellers[msg.sender] = Labeller({set: true, streak: 0, latestJob: 0, amountEarned: 0});
         }
 
-        labellers[addr].jobs[jobIndex] = true;
-        labellers[addr].latestJob = jobIndex;
+        labellers[msg.sender].jobs[jobIndex] = 1;
+        labellers[msg.sender].latestJob = jobIndex;
 
         job.agents.push(msg.sender);
         job.numClaimers += 1;
@@ -119,12 +126,13 @@ contract JobManager {
         return true;
     }
 
-    function answerJob(uint16 jobIndex, uint8 answer)
-        private
+    function answerJob(uint16 jobIndex, uint256 answer)
+        public
         hasBeenAssigned(jobs[jobIndex], msg.sender)
-        returns (uint8)
+        returns (uint256)
     {
         Job storage job = jobs[jobIndex];
+        labellers[msg.sender].jobs[jobIndex] = 2;
         job.addrToAns[msg.sender] = answer;
         job.numAnswered += 1;
         return answer;
@@ -138,30 +146,35 @@ contract JobManager {
     {
         Job storage job = jobs[jobIndex];
         require(!(job.settled[msg.sender]));
+        require(job.gameType == 2);
         bool isPaid;
-    	if (job.gameType == 2){
-            isPaid = esp(jobIndex);
-        }
-      	else {
-            isPaid = majority(jobIndex);
-        }
+        isPaid = esp(jobIndex);
 
         uint amount = job.pendingWithdrawals[msg.sender];
         if (isPaid){
             updateStreak(jobIndex, msg.sender);
-            job.amountEarned[msg.sender] = job.pendingWithdrawals[msg.sender];
+            labellers[msg.sender].amountEarned += job.pendingWithdrawals[msg.sender];
             job.pendingWithdrawals[msg.sender] = 0;
-            if (!msg.sender.send(amount)){
-                // No need to call throw here, just reset the amount owing
-                job.pendingWithdrawals[msg.sender] = amount;
-                return false;
-            }
         }
         else{
             updateStreak(jobIndex, msg.sender);
         }
         job.settled[msg.sender] = true;
         return true;
+    }
+
+    function withdraw()
+        public
+        returns (bool)
+    {
+        require(labellers[msg.sender].amountEarned > 0);
+        if (msg.sender.send(labellers[msg.sender].amountEarned)){
+            labellers[msg.sender].amountEarned = 0;
+            return true;
+        }
+        else {
+            return false;
+        }
     }
 
     // The Games
@@ -174,57 +187,20 @@ contract JobManager {
         Job storage job = jobs[jobIndex];
         require(!(job.settled[msg.sender]));
 
-        if (job.addrToAns[job.agents[0]] == job.addrToAns[job.agents[1]]){
-            job.pendingWithdrawals[job.agents[0]] = job.bounty/2;
-            job.pendingWithdrawals[job.agents[1]] = job.bounty/2;
-        }
-        return (job.addrToAns[job.agents[0]] == job.addrToAns[job.agents[1]]);
-    }
-
-    function majority(uint16 jobIndex)
-        answered(jobs[jobIndex])
-        private
-        returns (bool)
-    {
-        Job storage job = jobs[jobIndex];
-        require(!(job.settled[msg.sender]));
-
-        uint8 popularAnswer;
-        uint8[2] memory tally;
-
-        uint8 answer;
-        for (uint8 i = 0; i < job.gameType; i++){
-            answer = uint8(job.addrToAns[job.agents[i]]);
-            tally[answer] += 1;
-            if (tally[answer] > tally[popularAnswer]){
-                popularAnswer = answer;
+        uint32 numCorrect = 0;
+        uint256 bitString = job.addrToAns[job.agents[0]] ^ job.addrToAns[job.agents[1]];
+        for (uint16 i = 0; i < batchSize; i++){
+            if (bitString % 2 == 0){
+                numCorrect += 1;
+                bitString >> 1;
             }
         }
-        if (tally[popularAnswer] < job.gameType - 1){
-            return false;
-        }
-        else {
-            uint8 split = tally[popularAnswer];
-            for (i = 0; i < job.gameType; i++){
-                if (job.addrToAns[job.agents[i]] == popularAnswer){
-                    job.pendingWithdrawals[job.agents[i]] = job.bounty/split;
-                }
-            }
-            return (job.addrToAns[msg.sender] == popularAnswer);
-        }
+
+        job.pendingWithdrawals[job.agents[0]] = job.bounty/batchSize * numCorrect;
+        job.pendingWithdrawals[job.agents[1]] = job.bounty/batchSize * numCorrect;
+
+        return (numCorrect > batchSize / 2);
     }
-
-    function consensus(uint16 jobIndex)
-        answered(jobs[jobIndex])
-        private
-        returns (bool)
-    {
-        Job storage job = jobs[jobIndex];
-        require(!(job.settled[msg.sender]));
-
-        return true;
-    }
-
     // Helper functions
 
     function updateStreak(uint16 jobIndex, address addr) private
@@ -240,9 +216,9 @@ contract JobManager {
         }
     }
 
-    function claimAnswerJob(uint16 jobIndex, uint8 answer)
+    function claimAnswerJob(uint16 jobIndex, uint256 answer)
         public
-        returns(uint8)
+        returns(uint256)
     {
         claimJob(jobIndex);
         return answerJob(jobIndex, answer);
@@ -256,11 +232,6 @@ contract JobManager {
 
     function getNum(uint16 jobIndex) public returns (uint8){
         return jobs[jobIndex].numAnswered;
-    }
-
-    function getEarnings(uint16 jobIndex) public returns (uint){
-        Job storage job = jobs[jobIndex];
-        return job.amountEarned[msg.sender];
     }
 
     function getBalance() public view returns (uint){

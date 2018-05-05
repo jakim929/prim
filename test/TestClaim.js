@@ -36,6 +36,8 @@ contract("JobManager", accounts => {
         }).then(async (ret) => {
             await manager.settle(0, {from: accounts[0]});
             await manager.settle(0, {from: accounts[1]});
+            await manager.withdraw({from: accounts[0]});
+            await manager.withdraw({from: accounts[1]});
         })
     })
 })
