@@ -66,6 +66,7 @@ class App extends Component {
     componentWillMount() {
         getWeb3
         .then(results => {
+            console.log("calling componentWillMount web3 shit");
             this.setState({
                 web3: results.web3
             })
