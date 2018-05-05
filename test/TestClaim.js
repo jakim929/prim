@@ -11,7 +11,7 @@ contract("JobManager", accounts => {
             return manager.numJobs.call();
         }).then(ret => {
             jobCount = ret;
-            assert.equal(ret, 5);
+            assert.equal(ret, 3);
             return manager.currentJob.call({from: accounts[0]})
         }).then(ret => {
             return manager.findJob.call({from: accounts[0]});

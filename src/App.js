@@ -66,7 +66,6 @@ class App extends Component {
     componentWillMount() {
         getWeb3
         .then(results => {
-            console.log("calling componentWillMount web3 shit");
             this.setState({
                 web3: results.web3
             })
@@ -93,20 +92,6 @@ class App extends Component {
             jobDetails.numAnswered = ret[6].toNumber()
             return jobDetails;
         })
-        // console.log("fuck", currentJob)
-        // const valsToGet = ["gameType", "imageLink", "query", "owner", "bounty", "manager", "index", "numClaimers", "numAnswered"]
-        // console.log(currentJob)
-        // var getterCall =  (valueToGet) => {
-        //     return currentJob[valueToGet].call()
-        // }
-        // const promiseList = valsToGet.map((val) => getterCall(val))
-        // return Promise.all(promiseList).then((allVals) =>
-        // {
-        //     for(var i = 0; i < valsToGet.length; i++){
-        //         jobParameters[valsToGet[i]] = allVals[i]
-        //     }
-        //     return jobParameters
-        // });
     }
 
 
@@ -114,7 +99,6 @@ class App extends Component {
     //Already have a claimed job to work on?
     checkWorkState(currentJobManager, account) {
         var currentLabeller;
-        console.log("checkWorkState()")
         return currentJobManager.labellers.call(account)
         .then((labeller) => {
             currentLabeller = labeller;
@@ -157,46 +141,13 @@ class App extends Component {
             )
         })
     }
-    //
-    // instantiateContract = () => {
-    //     /*
-    //      * SMART CONTRACT EXAMPLE
-    //      *
-    //      * Normally these functions would be called in the context of a
-    //      * state management library, but for convenience I've placed them here.
-    //      */
-    //
-    //     const jobManager = contract(JobManagerContract);
-    //     jobManager.setProvider(this.state.web3.currentProvider);
-    //
-    //     this.jobManagerAbstract = jobManager;
-    //
-    //     var currentJobManager;
-    //     var currentJobIndex;
-    //     var currentJobDetails;
-    //     var account;
-    //
-    //     this.state.web3.eth.getAccounts((error, accounts) => {
-    //         jobManager.deployed().then((instance) => {
-    //             currentJobManager = instance;
-    //             return this.getNextJob(instance, accounts[0])
-    //         }).then((ret) => {
-    //             currentJobIndex = ret;
-    //             return this.getJobInfo(currentJobManager, currentJobIndex)
-    //         }, () => {console.log("failed to find new job")}
-    //         ).then((ret) => {
-    //             currentJobDetails = ret;
-    //             this.setState({account: accounts[0], currentJobManager, currentJobIndex, currentJobDetails})
-    //         })
-    //     })
-    // }
 
     closeSnack = () => {
         this.setState({open: false})
     }
 
     answerJob = (answer) => {
-        console.log("hello", this.state)
+        // console.log("hello", this.state)
 
         return this.state.currentJobManager.claimAnswerJob(this.state.currentJobIndex, answer, {from:this.state.account, gas:2100000})
         .then((ret) => {
@@ -207,13 +158,10 @@ class App extends Component {
 
     }
 
-
-
     refresh = () => {
         this.instantiateContract()
         this.forceUpdate()
     }
-
 
     render() {
         const { classes } = this.props;
@@ -242,16 +190,11 @@ class App extends Component {
                                 {
                                     this.state.needsToClaimJob ? (
                                         <Claim currentJobManager={this.state.currentJobManager} account={this.state.account} refresher={this.instantiateWorkspace.bind(this)}/>
-
                                     ):(
                                         <Job currentJobIndex={this.state.currentJobIndex} currentJobManager={this.state.currentJobManager} account={this.state.account} refresher={this.instantiateWorkspace.bind(this)}/>
                                     )
                                 }
-
                             </Paper>
-
-
-
                         </main>
                     </div>
                 );
@@ -267,22 +210,14 @@ class App extends Component {
                             </Typography>
                           </Toolbar>
                         </AppBar>
-
                         <main>
                             <Paper >
-                                Loading lol..
+                                Loading...make sure MetaMask is on the right network!
                             </Paper>
-
-
-
                         </main>
                     </div>
                 )
             }
-
-
-
-
     }
 }
 
