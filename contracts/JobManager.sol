@@ -1,13 +1,13 @@
 pragma solidity ^0.4.17;
 
 contract JobManager {
-    uint16 constant batchSize = 256;
+    uint16 constant batchSize = 8;
 
     struct Labeller {
         bool set;
         uint16 streak;
+        mapping(uint64 => uint8) jobs;
         uint16 latestJob;
-        mapping(uint256 => uint8) jobs;
         uint amountEarned;
     }
 
@@ -30,7 +30,7 @@ contract JobManager {
     uint16 public numJobs = 0;
     uint16 public currentJob = 0;
     Job[] public jobs;
-    mapping (address => Labeller) labellers;
+    mapping (address => Labeller) public labellers;
     address public owner;
 
     modifier sufficientFunds(uint bounty, uint available) { require(bounty < available); _; }

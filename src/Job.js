@@ -54,10 +54,11 @@ class Job extends Component {
         if(this.state.imageLoaded){
             this.setState((prevState, props) => {
                 var currentAnswer =  prevState.answers + answer.toString()
+                console.log( currentAnswer.length , this.state.jobSet.imageLink.length)
                 return {
                     currentTaskIndex : prevState.currentTaskIndex + 1,
                     answers: currentAnswer,
-                    completed: currentAnswer.length == this.state.jobSet.imageLink.length,
+                    completed: currentAnswer.length === this.state.jobSet.imageLink.length,
                     imageLoaded: false
                 }
             }, () => {console.log(this.state.answers)})
